@@ -1,0 +1,72 @@
+Skip to main content
+Experimenting with Stable Retro : r/reinforcementlearning
+
+Open menu
+
+r/reinforcementlearning
+Current search is within r/reinforcementlearning
+Remove r/reinforcementlearning filter and expand search to all of Reddit
+Search in r/reinforcementlearning
+Open chat
+Create
+Create post
+
+Open inbox
+
+User Avatar
+Expand user menu
+
+Back
+Go to reinforcementlearning
+r/reinforcementlearning
+•
+33 min. ago
+deney-kedeip
+
+Experimenting with Stable Retro
+I've been experimenting with retro stable lately and it's complex but cool. It uses gymnasium as a base for the environments and stable baselines3 for the agents, and on top of that it offers an interface so that one can use video games from the 8/16-bit era.
+
+At first the entire wrapper system seems complicated, because you can combine both gymnasium and sbl3 classes. And to make matters worse, there are old documents online about older versions of these libraries like gym, gym-retro and stablebaselines. But once you get the hang of it, the potential is huge.
+
+For example, I have been training different models with various games and even with DQN it is possible to achieve good results. It's not always easy, but it is possible. One way is to skip frames, about 10 or so. This can speed up training and produce good results in the game. Especially in combination with stacking a few frames, 3 are enough.
+
+There are also some undocumented features that can be configured in the scene's json file, such as a crop of input images or valid actions, but the latter doesn't seem to work correctly, so I found it more effective to create a wrapper that limits actions and converts them to the agent's own space.
+
+
+Upvote
+1
+
+Downvote
+
+0
+comments
+
+Share
+Share
+Add a comment
+Thinking Snoo
+Be the first to comment
+
+Nobody's responded to this post yet.
+Add your thoughts and get the conversation going.
+
+r/reinforcementlearning
+Joined
+Reinforcement Learning
+Reinforcement learning is a subfield of AI/statistics focused on exploring/understanding complicated environments and learning how to optimally acquire rewards. Examples are AlphaGo, clinical trials & A/B tests, and Atari game playing.
+
+Show more
+38K
+Members
+19
+ Online
+Top 3%
+Rank by size 
+MODERATORS
+u/lpiloto avatar
+u/lpiloto
+u/quaternion avatar
+u/quaternion
+u/gwern avatar
+u/gwern
+Message the mods

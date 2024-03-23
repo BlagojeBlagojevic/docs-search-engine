@@ -1,0 +1,813 @@
+Stack Overflow
+About
+Products
+For Teams
+Search…
+Home
+Questions
+Tags
+Users
+Companies
+LABS
+Discussions
+NEW
+COLLECTIVES
+Communities for your favorite technologies. Explore all Collectives
+
+TEAMS
+
+Ask questions, find answers and collaborate at work with Stack Overflow for Teams.
+
+ 
+How do I concatenate const/literal strings in C?
+Asked 15 years, 4 months ago
+Modified 2 years, 10 months ago
+Viewed 1.3m times
+427
+
+I'm working in C, and I have to concatenate a few things.
+
+Right now I have this:
+
+message = strcat("TEXT ", var);
+
+message2 = strcat(strcat("TEXT ", foo), strcat(" TEXT ", bar));
+Now if you have experience in C I'm sure you realize that this gives you a segmentation fault when you try to run it. So how do I work around that?
+
+cstringconcatenation
+Share
+Follow
+edited May 22, 2017 at 17:41
+Peter Mortensen's user avatar
+Peter Mortensen
+31k2222 gold badges108108 silver badges132132 bronze badges
+asked Nov 21, 2008 at 13:06
+The.Anti.9's user avatar
+The.Anti.9
+44k4949 gold badges125125 silver badges162162 bronze badges
+9
+I would like to suggest that you use strlcat instead of strcat! gratisoft.us/todd/papers/strlcpy.html – 
+activout.se
+ Nov 21, 2008 at 13:37
+7
+I would like to repeart That suggestion. Strcat causes vulnerability to buffer overflow exploits. Someone can give your program data that causes it to execute arbitrary code. – 
+Brian
+ Nov 21, 2008 at 14:10
+Add a comment
+17 Answers
+Sorted by:
+
+Highest score (default)
+479
+
+In C, "strings" are just plain char arrays. Therefore, you can't directly concatenate them with other "strings".
+
+You can use the strcat function, which appends the string pointed to by src to the end of the string pointed to by dest:
+
+char *strcat(char *dest, const char *src);
+Here is an example from cplusplus.com:
+
+char str[80];
+strcpy(str, "these ");
+strcat(str, "strings ");
+strcat(str, "are ");
+strcat(str, "concatenated.");
+For the first parameter, you need to provide the destination buffer itself. The destination buffer must be a char array buffer. E.g.: char buffer[1024];
+
+Make sure that the first parameter has enough space to store what you're trying to copy into it. If available to you, it is safer to use functions like: strcpy_s and strcat_s where you explicitly have to specify the size of the destination buffer.
+
+Note: A string literal cannot be used as a buffer, since it is a constant. Thus, you always have to allocate a char array for the buffer.
+
+The return value of strcat can simply be ignored, it merely returns the same pointer as was passed in as the first argument. It is there for convenience, and allows you to chain the calls into one line of code:
+
+strcat(strcat(str, foo), bar);
+So your problem could be solved as follows:
+
+char *foo = "foo";
+char *bar = "bar";
+char str[80];
+strcpy(str, "TEXT ");
+strcat(str, foo);
+strcat(str, bar);
+Share
+Follow
+edited Mar 16, 2015 at 17:31
+Endre's user avatar
+Endre
+76088 silver badges1717 bronze badges
+answered Nov 21, 2008 at 13:13
+Brian R. Bondy's user avatar
+Brian R. Bondy
+343k125125 gold badges597597 silver badges638638 bronze badges
+79
+Would you put "Be very careful that..." in bold, please? This can't be stressed enough. Misuse of strcat, strcpy, and sprintf are the heart of unstable/insecure software. – 
+plinth
+ Nov 21, 2008 at 13:33
+14
+Warning: As written, this code will leave a giant, gaping hole in your code for buffer overflow exploits. – 
+Brian
+ Nov 21, 2008 at 14:09
+14
+There is no buffer overflow exploit possible in the above example. And yes I agree in general I wouldn't use the above example for undetermined string lengths of foo and bar. – 
+Brian R. Bondy
+ Nov 21, 2008 at 14:14
+2
+Don't use strcat multiple times! strcat has to check all the previous bytes (searching for '\0') you already concatenated. This is useless processing. – 
+dolmen
+ Sep 7, 2010 at 16:13
+23
+To second @dolmen, Joel Spolsky has written quite elaborate article on the issue. Should be a mandatory reading. ;-) – 
+peter.slizik
+ Aug 14, 2012 at 14:53
+Show 4 more comments
+295
+
+Avoid using strcat in C code. The cleanest and, most importantly, the safest way is to use snprintf:
+
+char buf[256];
+snprintf(buf, sizeof(buf), "%s%s%s%s", str1, str2, str3, str4);
+Some commenters raised an issue that the number of arguments may not match the format string and the code will still compile, but most compilers already issue a warning if this is the case.
+
+Share
+Follow
+edited May 13, 2021 at 14:13
+xy2's user avatar
+xy2
+6,65733 gold badges1515 silver badges3535 bronze badges
+answered Nov 21, 2008 at 13:21
+Alex B's user avatar
+Alex B
+83.6k4747 gold badges209209 silver badges281281 bronze badges
+3
+Checkers, he was talking about the parentheses around "buf" of the sizeof argument. they are not required if the argument is an expression. But i don't understand why you are downvoted. i think your answer is the best of all, even though it is c99. (maybe because of that they disagree! lamers!) +1 – 
+Johannes Schaub - litb
+ Nov 21, 2008 at 13:27
+7
+sizeof() only works here for char buf[...]. NOT for char * buf = malloc(...). There aren't many differences between arrays and pointers, but this is one of them! – 
+Mr.Ree
+ Nov 21, 2008 at 13:28
+2
+Also, he is trying to perform concatenation. Concatenating using snprintf() is a BIG no no. – 
+Leonardo Herrera
+ Nov 21, 2008 at 15:05
+6
+@MrRee: The differences between pointers and arrays are vast and complete! It's in how you use them that does not always differ. Also, pointers and dynamic allocation are really orthogonal concepts. – 
+Lightness Races in Orbit
+ Dec 7, 2011 at 20:11 
+47
+One of my pet peeves is people like @unwind who insist on the pointless distinction between sizeof(x) and sizeof x. The parenthesized notation always works and the unparenthesized notation only works sometimes, so always use the parenthesized notation; it is a simple rule to remember and is safe. This gets into a religious argument — I've been involved in discussions with those who object before — but the simplicity of 'always use parentheses' outweighs any merit to not using them (IMNSHO, of course). This is presented for balance. – 
+Jonathan Leffler
+ Mar 31, 2014 at 0:22
+Show 14 more comments
+54
+
+Strings can also be concatenated at compile time.
+
+#define SCHEMA "test"
+#define TABLE  "data"
+
+const char *table = SCHEMA "." TABLE ; // note no + or . or anything
+const char *qry =               // include comments in a string
+    " SELECT * "                // get all fields
+    " FROM " SCHEMA "." TABLE   /* the table */
+    " WHERE x = 1 "             /* the filter */ 
+                ;
+Share
+Follow
+answered Sep 19, 2015 at 8:22
+dbagnara's user avatar
+dbagnara
+77566 silver badges66 bronze badges
+Add a comment
+31
+
+Folks, use strncpy(), strncat(), or snprintf().
+Exceeding your buffer space will trash whatever else follows in memory!
+(And remember to allow space for the trailing null '\0' character!)
+
+Share
+Follow
+edited Dec 7, 2011 at 20:39
+Keith Thompson's user avatar
+Keith Thompson
+259k4545 gold badges434434 silver badges645645 bronze badges
+answered Nov 21, 2008 at 13:33
+Mr.Ree's user avatar
+Mr.Ree
+8,3702828 silver badges3030 bronze badges
+3
+Not only should you remember to allow space for the NULL character, you need to remember to add the NULL character. strncpy and strncat don't do that for you. – 
+Graeme Perrow
+ Nov 21, 2008 at 13:36
+Uh? strncpy() and strncat() sure add the terminating character. In fact, they add too many. At least as long as there's space left in the buffer, which is a huge trap with these calls. Not recommended. – 
+unwind
+ Nov 21, 2008 at 13:42
+3
+@unwind, I think the point of Graeme is that if the buffer is too small, strncpy or strncat will not add the terminating '\0'. – 
+quinmars
+ Nov 21, 2008 at 13:45
+2
+snprintf is good, strncpy/strncat is the worst possible recommendation, strlcpy/strlcat is much better. – 
+Robert Gamble
+ Nov 21, 2008 at 14:04
+11
+Don't use strncpy(). It's not a "safer" version of strcpy(). The target character array may be needlessly padded with extra '\0' characters, or worse, it may be left unterminated (i.e., not a string). (It was designed for use with a data structure that's rarely used anymore, a character array padded to the end with zero or more '\0' characters.) – 
+Keith Thompson
+ Dec 7, 2011 at 20:39
+Show 4 more comments
+16
+
+Also malloc and realloc are useful if you don't know ahead of time how many strings are being concatenated.
+
+#include <stdio.h>
+#include <string.h>
+
+void example(const char *header, const char **words, size_t num_words)
+{
+    size_t message_len = strlen(header) + 1; /* + 1 for terminating NULL */
+    char *message = (char*) malloc(message_len);
+    strncat(message, header, message_len);
+
+    for(int i = 0; i < num_words; ++i)
+    {
+       message_len += 1 + strlen(words[i]); /* 1 + for separator ';' */
+       message = (char*) realloc(message, message_len);
+       strncat(strncat(message, ";", message_len), words[i], message_len);
+    }
+
+    puts(message);
+
+    free(message);
+}
+Share
+Follow
+answered Nov 21, 2008 at 15:29
+Reed Hedges's user avatar
+Reed Hedges
+1,61022 gold badges1616 silver badges1717 bronze badges
+1
+This will end in a endless loop when num_words>INT_MAX, maybe you should use size_t for i – 
+12431234123412341234123
+ Mar 25, 2017 at 12:48 
+Add a comment
+7
+
+Best way to do it without having a limited buffer size is by using asprintf()
+
+char* concat(const char* str1, const char* str2)
+{
+    char* result;
+    asprintf(&result, "%s%s", str1, str2);
+    return result;
+}
+Share
+Follow
+edited Nov 13, 2013 at 20:23
+answered Apr 8, 2013 at 2:23
+Nico Cvitak's user avatar
+Nico Cvitak
+47144 silver badges77 bronze badges
+2
+You should return char *, not const char *. The return value will need to be passed to free. – 
+Per Johansson
+ Aug 5, 2013 at 13:31
+2
+Unfortunately asprintf is only a GNU extension. – 
+Calmarius
+ Nov 28, 2013 at 16:24
+Add a comment
+7
+
+If you have experience in C you will notice that strings are only char arrays where the last character is a null character.
+
+Now that is quite inconvenient as you have to find the last character in order to append something. strcat will do that for you.
+
+So strcat searches through the first argument for a null character. Then it will replace this with the second argument's content (until that ends in a null).
+
+Now let's go through your code:
+
+message = strcat("TEXT " + var);
+Here you are adding something to the pointer to the text "TEXT" (the type of "TEXT" is const char*. A pointer.).
+
+That will usually not work. Also modifying the "TEXT" array will not work as it is usually placed in a constant segment.
+
+message2 = strcat(strcat("TEXT ", foo), strcat(" TEXT ", bar));
+That might work better, except that you are again trying to modify static texts. strcat is not allocating new memory for the result.
+
+I would propose to do something like this instead:
+
+sprintf(message2, "TEXT %s TEXT %s", foo, bar);
+Read the documentation of sprintf to check for it's options.
+
+And now an important point:
+
+Ensure that the buffer has enough space to hold the text AND the null character. There are a couple of functions that can help you, e.g., strncat and special versions of printf that allocate the buffer for you. Not ensuring the buffer size will lead to memory corruption and remotely exploitable bugs.
+
+Share
+Follow
+edited May 22, 2017 at 18:24
+Peter Mortensen's user avatar
+Peter Mortensen
+31k2222 gold badges108108 silver badges132132 bronze badges
+answered Nov 21, 2008 at 13:31
+Ralf's user avatar
+Ralf
+44733 silver badges44 bronze badges
+The type of "TEXT" is char[5], not const char*. It decays to char* in most contexts. For backward compatibility reasons, string literals are not const, but attempting to modify them results in undefined behavior. (In C++, string literals are const.) – 
+Keith Thompson
+ Dec 7, 2011 at 20:41
+Add a comment
+5
+
+Do not forget to initialize the output buffer. The first argument to strcat must be a null terminated string with enough extra space allocated for the resulting string:
+
+char out[1024] = ""; // must be initialized
+strcat( out, null_terminated_string ); 
+// null_terminated_string has less than 1023 chars
+Share
+Follow
+answered Nov 21, 2008 at 13:41
+David Rodríguez - dribeas's user avatar
+David Rodríguez - dribeas
+207k2323 gold badges297297 silver badges491491 bronze badges
+Add a comment
+5
+
+As people pointed out string handling improved much. So you may want to learn how to use the C++ string library instead of C-style strings. However here is a solution in pure C
+
+#include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+void appendToHello(const char *s) {
+    const char *const hello = "hello ";
+
+    const size_t sLength     = strlen(s);
+    const size_t helloLength = strlen(hello);
+    const size_t totalLength = sLength + helloLength;
+
+    char *const strBuf = malloc(totalLength + 1);
+    if (strBuf == NULL) {
+        fprintf(stderr, "malloc failed\n");
+        exit(EXIT_FAILURE);
+    }
+
+    strcpy(strBuf, hello);
+    strcpy(strBuf + helloLength, s);
+
+    puts(strBuf);
+
+    free(strBuf);
+
+}
+
+int main (void) {
+    appendToHello("blah blah");
+    return 0;
+}
+I am not sure whether it is correct/safe but right now I could not find a better way to do this in ANSI C.
+
+Share
+Follow
+edited Dec 7, 2011 at 20:51
+Keith Thompson's user avatar
+Keith Thompson
+259k4545 gold badges434434 silver badges645645 bronze badges
+answered Dec 7, 2011 at 20:04
+Nils's user avatar
+Nils
+13.6k1919 gold badges8787 silver badges110110 bronze badges
+<string.h> is C++ style. You want "string.h". You also calculate strlen(s1) twice, which isn't needed. s3 should be totalLenght+1 long. – 
+Mooing Duck
+ Dec 7, 2011 at 20:08
+6
+@MooingDuck: "string.h" is nonsense. – 
+sbi
+ Dec 7, 2011 at 20:15
+I haven't used C-style strings for a while. Feel free to post a fixed version. – 
+Nils
+ Dec 7, 2011 at 20:16
+7
+@MooingDuck: That's incorrect. #include <string.h> is correct C. Use angle brackets for standard and system headers (including <string.h>), quotation marks for headers that are part of your program. (#include "string.h" will happen to work if you don't have your own header file by that name, but use <string.h> anyway.) – 
+Keith Thompson
+ Dec 7, 2011 at 20:33
+Note that this depends on C99-specific features: mixing declarations and statements, and variable-length arrays (VLAs). Note also that VLAs provide no mechanism to detect or handle allocation failures; if there isn't enough room to allocate a VLA, your program's behavior is undefined. – 
+Keith Thompson
+ Dec 7, 2011 at 20:35
+Show 4 more comments
+5
+
+It is undefined behaviour to attempt to modify string literals, which is what something like:
+
+strcat ("Hello, ", name);
+will attempt to do. It will try to tack on the name string to the end of the string literal "Hello, ", which is not well defined.
+
+Try something this. It achieves what you appear to be trying to do:
+
+char message[1000];
+strcpy (message, "TEXT ");
+strcat (message, var);
+This creates a buffer area that is allowed to be modified and then copies both the string literal and other text to it. Just be careful with buffer overflows. If you control the input data (or check it before-hand), it's fine to use fixed length buffers like I have.
+
+Otherwise, you should use mitigation strategies such as allocating enough memory from the heap to ensure you can handle it. In other words, something like:
+
+const static char TEXT[] = "TEXT ";
+
+// Make *sure* you have enough space.
+
+char *message = malloc (sizeof(TEXT) + strlen(var) + 1);
+if (message == NULL)
+     handleOutOfMemoryIntelligently();
+strcpy (message, TEXT);
+strcat (message, var);
+
+// Need to free message at some point after you're done with it.
+Share
+Follow
+edited Feb 22, 2016 at 2:27
+answered Nov 21, 2008 at 13:14
+paxdiablo's user avatar
+paxdiablo
+867k239239 gold badges1.6k1.6k silver badges2k2k bronze badges
+4
+What happens if var/foo/bar has more than 1000 characters? >:) – 
+Geo
+ Nov 21, 2008 at 14:20
+1
+Then you will get a buffer overflow, which you can add code to check for beforehand (say, with strlen). But the purpose of a code snippet is to show how something works without polluting it with too much extra code. Otherwise I'd be checking lengths, whether var/foo/bar was null, etc. – 
+paxdiablo
+ Nov 21, 2008 at 22:23
+7
+@paxdiablo: But you didn't even mention it, in an answer to a question where it would appear to need mentioning. That makes your answer dangerous. You also didn't explain why this code is better than the OP's original code, except for the myth that it "achieves the same result as your original" (then what would be the point? the original was broken!), so the answer is also incomplete. – 
+Lightness Races in Orbit
+ Dec 7, 2011 at 20:09 
+Have hopefully addressed your concerns, @PreferenceBean, though in a less timely manner than ideal :-) Let me know if you still have a problem with the answer, and I'll improve it further. – 
+paxdiablo
+ Feb 22, 2016 at 2:28
+Add a comment
+3
+
+The first argument of strcat() needs to be able to hold enough space for the concatenated string. So allocate a buffer with enough space to receive the result.
+
+char bigEnough[64] = "";
+
+strcat(bigEnough, "TEXT");
+strcat(bigEnough, foo);
+
+/* and so on */
+strcat() will concatenate the second argument with the first argument, and store the result in the first argument, the returned char* is simply this first argument, and only for your convenience.
+
+You do not get a newly allocated string with the first and second argument concatenated, which I'd guess you expected based on your code.
+
+Share
+Follow
+answered Nov 21, 2008 at 13:14
+Pieter's user avatar
+Pieter
+17.6k88 gold badges5151 silver badges9090 bronze badges
+Add a comment
+2
+
+You can write your own function that does the same thing as strcat() but that doesn't change anything:
+
+#define MAX_STRING_LENGTH 1000
+char *strcat_const(const char *str1,const char *str2){
+    static char buffer[MAX_STRING_LENGTH];
+    strncpy(buffer,str1,MAX_STRING_LENGTH);
+    if(strlen(str1) < MAX_STRING_LENGTH){
+        strncat(buffer,str2,MAX_STRING_LENGTH - strlen(buffer));
+    }
+    buffer[MAX_STRING_LENGTH - 1] = '\0';
+    return buffer;
+}
+
+int main(int argc,char *argv[]){
+    printf("%s",strcat_const("Hello ","world"));    //Prints "Hello world"
+    return 0;
+}
+If both strings together are more than 1000 characters long, it will cut the string at 1000 characters. You can change the value of MAX_STRING_LENGTH to suit your needs.
+
+Share
+Follow
+edited Aug 18, 2016 at 12:06
+answered Jul 29, 2016 at 12:39
+Donald Duck's user avatar
+Donald Duck
+8,5772323 gold badges7777 silver badges100100 bronze badges
+I foresee buffer overflow, I see you allocated strlen(str1) + strlen(str2), but you write strlen(str1) + strlen(str2) + 1 characters. So can you really write your own function? – 
+Liviu
+ Jul 29, 2016 at 12:44 
+Wow! You never free the memory, nasty, nasty! return buffer;     free(buffer); – 
+Liviu
+ Jul 29, 2016 at 12:46
+BTW, sizeof(char) == 1 (Besides, there are other more subtle errors ...) Can you see now why you don't have to write your own function ? – 
+Liviu
+ Jul 29, 2016 at 12:46 
+@Liviu I do free the memory at the line free(buffer);. – 
+Donald Duck
+ Jul 29, 2016 at 12:47
+1
+free(buffer); after return buffer; is never executed, see it in a debugger ;) I see now: yes, you have to free the memory in the main function – 
+Liviu
+ Jul 29, 2016 at 12:52 
+Show 10 more comments
+2
+
+You are trying to copy a string into an address that is statically allocated. You need to cat into a buffer.
+
+Specifically:
+
+...snip...
+
+destination
+
+Pointer to the destination array, which should contain a C string, and be large enough to contain the concatenated resulting string.
+...snip...
+
+http://www.cplusplus.com/reference/clibrary/cstring/strcat.html
+
+There's an example here as well.
+
+Share
+Follow
+edited May 22, 2017 at 18:21
+Peter Mortensen's user avatar
+Peter Mortensen
+31k2222 gold badges108108 silver badges132132 bronze badges
+answered Nov 21, 2008 at 13:17
+Todd's user avatar
+Todd
+2,3511414 silver badges1111 bronze badges
+Add a comment
+1
+
+Assuming you have a char[fixed_size] rather than a char*, you can use a single, creative macro to do it all at once with a <<cout<<like ordering ("rather %s the disjointed %s\n", "than", "printf style format"). If you are working with embedded systems, this method will also allow you to leave out malloc and the large *printf family of functions like snprintf() (This keeps dietlibc from complaining about *printf too)
+
+#include <unistd.h> //for the write example
+//note: you should check if offset==sizeof(buf) after use
+#define strcpyALL(buf, offset, ...) do{ \
+    char *bp=(char*)(buf+offset); /*so we can add to the end of a string*/ \
+    const char *s, \
+    *a[] = { __VA_ARGS__,NULL}, \
+    **ss=a; \
+    while((s=*ss++)) \
+         while((*s)&&(++offset<(int)sizeof(buf))) \
+            *bp++=*s++; \
+    if (offset!=sizeof(buf))*bp=0; \
+}while(0)
+
+char buf[256];
+int len=0;
+
+strcpyALL(buf,len,
+    "The config file is in:\n\t",getenv("HOME"),"/.config/",argv[0],"/config.rc\n"
+);
+if (len<sizeof(buf))
+    write(1,buf,len); //outputs our message to stdout
+else
+    write(2,"error\n",6);
+
+//but we can keep adding on because we kept track of the length
+//this allows printf-like buffering to minimize number of syscalls to write
+//set len back to 0 if you don't want this behavior
+strcpyALL(buf,len,"Thanks for using ",argv[0],"!\n");
+if (len<sizeof(buf))
+    write(1,buf,len); //outputs both messages
+else
+    write(2,"error\n",6);
+Note 1, you typically wouldn't use argv[0] like this - just an example
+Note 2, you can use any function that outputs a char*, including nonstandard functions like itoa() for converting integers to string types.
+Note 3, if you are already using printf anywhere in your program there is no reason not to use snprintf(), since the compiled code would be larger (but inlined and significantly faster)
+Share
+Follow
+answered Dec 14, 2014 at 6:54
+technosaurus's user avatar
+technosaurus
+7,72211 gold badge3131 silver badges5353 bronze badges
+Add a comment
+1
+
+int main()
+{
+    char input[100];
+    gets(input);
+
+    char str[101];
+    strcpy(str, " ");
+    strcat(str, input);
+
+    char *p = str;
+
+    while(*p) {
+       if(*p == ' ' && isalpha(*(p+1)) != 0)
+           printf("%c",*(p+1));
+       p++;
+    }
+
+    return 0;
+}
+Share
+Follow
+edited Nov 5, 2016 at 0:10
+Eli Sadoff's user avatar
+Eli Sadoff
+7,21866 gold badges3333 silver badges6262 bronze badges
+answered Nov 4, 2016 at 21:10
+Miljan Rakita's user avatar
+Miljan Rakita
+1,50344 gold badges2424 silver badges4444 bronze badges
+Add a comment
+1
+
+This was my solution
+
+#include <stdlib.h>
+#include <stdarg.h>
+
+char *strconcat(int num_args, ...) {
+    int strsize = 0;
+    va_list ap;
+    va_start(ap, num_args);
+    for (int i = 0; i < num_args; i++) 
+        strsize += strlen(va_arg(ap, char*));
+
+    char *res = malloc(strsize+1);
+    strsize = 0;
+    va_start(ap, num_args);
+    for (int i = 0; i < num_args; i++) {
+        char *s = va_arg(ap, char*);
+        strcpy(res+strsize, s);
+        strsize += strlen(s);
+    }
+    va_end(ap);
+    res[strsize] = '\0';
+
+    return res;
+}
+but you need to specify how many strings you're going to concatenate
+
+char *str = strconcat(3, "testing ", "this ", "thing");
+Share
+Follow
+answered Dec 31, 2016 at 16:41
+Naheel's user avatar
+Naheel
+49933 silver badges1414 bronze badges
+Add a comment
+1
+
+Try something similar to this:
+
+#include <stdio.h>
+#include <string.h>
+
+int main(int argc, const char * argv[])
+{
+  // Insert code here...
+  char firstname[100], secondname[100];
+  printf("Enter First Name: ");
+  fgets(firstname, 100, stdin);
+  printf("Enter Second Name: ");
+  fgets(secondname,100,stdin);
+  firstname[strlen(firstname)-1]= '\0';
+  printf("fullname is %s %s", firstname, secondname);
+
+  return 0;
+}
+Share
+Follow
+edited May 22, 2017 at 18:25
+Peter Mortensen's user avatar
+Peter Mortensen
+31k2222 gold badges108108 silver badges132132 bronze badges
+answered Apr 10, 2014 at 12:41
+jksante's user avatar
+jksante
+2911 bronze badge
+Add a comment
+Highly active question. Earn 10 reputation (not counting the association bonus) in order to answer this question. The reputation requirement helps protect this question from spam and non-answer activity.
+Not the answer you're looking for? Browse other questions tagged cstringconcatenation or ask your own question.
+The Overflow Blog
+Why the creator of Node.js® created a new JavaScript runtime
+Is AI making your code worse?
+Featured on Meta
+Changing how community leadership works on Stack Exchange: a proposal and...
+Shifting the data dump schedule: A proposal
+Temporary policy: Generative AI (e.g., ChatGPT) is banned
+2024 Community Moderator Election Results
+19 people chatting
+C
+9 hours ago - Vinod
+dbush: Oct 28 at 23:51
+C++ Questions and Answers
+20 hours ago - AAB
+Mgetz: 22 hours ago
+nwp: yesterday
+John: yesterday
+PeterT: yesterday
+ratchet freak: Mar 18 at 10:17
+MangaD: Oct 26 at 9:07
+Linked
+4
+Multiple string concatenation
+3
+C system function concatenate strings?
+0
+error: invalid operands to binary + char *
+1
+How do I concatenate multiple char strings in C?
+-4
+How to concatenate a char * and a const char*?
+0
+I just can't figure out strcat
+-1
+best way to add char* prefix to existing char* in C
+-1
+String concat in C
+0
+how to concat char* and char in C?
+0
+Global variable in main with concatenation?
+See more linked questions
+Related
+5
+Concatenating strings in C
+3
+String concatenation in C
+0
+String concatenation in C
+0
+String concatenation in C
+21
+C string concatenation of constants
+0
+Concatenation of literal strings in C
+1
+Concatenation In C
+1
+String concatenation in c, not using function
+0
+concatenate const strings and variable inputs in C
+0
+Concatenate const char to char
+Hot Network Questions
+Can I Clear The Grid?
+How to ask a professor from 29 years ago to write you a recommendation?
+American dies in Dominican Republic...and it's more complicated
+Calculating pressure inside a bag using the ideal gas laws
+Can a UK photographer legally photograph a US wedding if the wedding day shoot itself is unpaid?
+Permanent Full moon via "Magic"
+Is it possible to use thermal pumping for power generation in space?
+Help identifying this Hebrew word: "lesh," meaning "narcissistic"?
+Can Rapberry PI 4 GPIO pins provide a ground instead of 3.3V? Looking to control a 5v relay
+What can a ranger 1/paladin 1 do with their spell slots?
+Idiomatic phrase for "review passed once you did the following"
+Is there a literary term for a word which looks completely 'flat' when spelled out in lowercase?
+Do US banks cover the loss of money in checking accounts due to identity theft or hacking through the FDIC or some other ways?
+Are any countries claiming that their humanitarian aid for Gaza is being declined by Israel?
+Why aren't helicopter blades tapered?
+Trolling the Russians with deliberately deadly rocket fuel
+Why does Kate risk all her bodies?
+How to make a ParametricPlot3D curve rotate smoothly?
+The effectiveness of "honors" classes
+What happens if I connect a charger via USB-C to an iMac (M1 2021)?
+Why does my dictionary define ?? ("to attempt") as ?? ("to plan")?
+What does ????(????????)mean?
+A group generated by three rational points has actually two generators?
+Old movie similar to Clash of Titans (1981) but with Romans
+ Question feed
+
+STACK OVERFLOW
+Questions
+Help
+PRODUCTS
+Teams
+Advertising
+Collectives
+Talent
+COMPANY
+About
+Press
+Work Here
+Legal
+Privacy Policy
+Terms of Service
+Contact Us
+Cookie Settings
+Cookie Policy
+STACK EXCHANGE NETWORK
+Technology
+Culture & recreation
+Life & arts
+Science
+Professional
+Business
+API
+Data
+Blog
+Facebook
+Twitter
+LinkedIn
+Instagram
+Site design / logo © 2024 Stack Exchange Inc; user contributions licensed under CC BY-SA. rev 2024.3.21.6677
+

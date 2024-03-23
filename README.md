@@ -35,3 +35,6 @@ To run the program:
 $ ./search_engine
 > Input term you want to search:
 > algorithm
+```
+## Notes
+Make sure the documents you want to search are located in the specified directory ("a\\" in this case).
